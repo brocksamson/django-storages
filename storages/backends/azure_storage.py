@@ -1,4 +1,5 @@
 import os.path
+import mimetypes
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
@@ -61,6 +62,7 @@ class AzureStorage(Storage):
         # only works for files up to 64 MB
         # see http://www.windowsazure.com/en-us/develop/python/how-to-guides/blob-service/
         # for guide to chunking content
+        content_type = getattr(content, 'content_type', mimetypes.guess_type(name)[0])
         bytes = None
         for chunk in content.chunks():
             if bytes:
@@ -68,7 +70,7 @@ class AzureStorage(Storage):
             else:
                 bytes = chunk
         self.connection.put_blob(self.azure_container, name,
-                                 bytes, 'BlockBlob')
+                                 bytes, 'BlockBlob', x_ms_blob_content_type=content_type)
         return name
 
     def url(self, name):
