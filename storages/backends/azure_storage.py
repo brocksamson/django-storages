@@ -23,6 +23,7 @@ class AzureStorage(Storage):
     account_name = setting("AZURE_ACCOUNT_NAME")
     account_key = setting("AZURE_ACCOUNT_KEY")
     azure_container = setting("AZURE_CONTAINER")
+    media_url = setting("MEDIA_URL")
 
     def __init__(self, *args, **kwargs):
         super(AzureStorage, self).__init__(*args, **kwargs)
@@ -57,9 +58,18 @@ class AzureStorage(Storage):
         return properties["content-length"]
 
     def _save(self, name, content):
+        # only works for files up to 64 MB
+        # see http://www.windowsazure.com/en-us/develop/python/how-to-guides/blob-service/
+        # for guide to chunking content
+        bytes = None
+        for chunk in content.chunks():
+            if bytes:
+                bytes = bytes + chunk
+            else:
+                bytes = chunk
         self.connection.put_blob(self.azure_container, name,
-                                 content, "BlockBlob")
+                                 bytes, 'BlockBlob')
         return name
 
     def url(self, name):
-        return "%s/%s" % (self.azure_bucket, name)
+        return "{0}{1}/{2}".format(self.media_url, self.azure_container, name)
